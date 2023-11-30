@@ -1,16 +1,13 @@
-FROM ubuntu:latest AS build
+FROM maven:3.8.4-openjdk-17 AS build
 
-RUN apt-get update
-RUN apt-get install openjdk-17-jdk -y
-COPY . /usr/src/fintracker
+WORKDIR /usr/src/app
+COPY . /usr/src/app
+RUN mvn clean package
 
-RUN apt-get install maven -y
-RUN mvn clean install
-
+# Production Stage
 FROM openjdk:17-jdk-slim
 
-EXPOSE 8080
+WORKDIR /usr/src/app
+COPY --from=build /usr/src/app/target/fintracker-0.0.1-SNAPSHOT.jar app.jar
 
-COPY --from=build /target/fintracker-0.0.1-SNAPSHOT.jar app.jar
-
-ENTRYPOINT [ "java", "-jar", "app.jar" ]
+CMD ["java", "-jar", "app.jar"]
