@@ -1,8 +1,10 @@
 package com.example.fintracker.controller;
 
 
+import com.example.fintracker.filter.dto.response.ClassifiedGainsResponse;
 import com.example.fintracker.filter.model.Transaction;
 
+import com.example.fintracker.filter.strategy.CategoriaStrategy;
 import com.example.fintracker.service.transaction.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -51,15 +53,52 @@ public class TransactionController {
         List<Transaction> transactions = transactionService.getAllTransactions();
 
         List<Transaction> transactionsByUser = new ArrayList<>();
-        for(int i = 0;i<transactions.size();i++){
-           if(transactions.get(i).getUser_id() == userId ){
-               transactionsByUser.add(transactions.get(i));
-           }
+        for (Transaction transaction : transactions) {
+            if (transaction.getUser_id() == userId) {
+                transactionsByUser.add(transaction);
+            }
         }
-
-
         return new ResponseEntity<>(transactionsByUser, HttpStatus.OK);
     }
 
+    @GetMapping("/classified-gains/{userId}")
+    public ClassifiedGainsResponse getGains(@PathVariable int userId) {
+        List<Transaction> transactions = transactionService.getAllTransactions();
+
+        List<Transaction> allTransactions = new ArrayList<>();
+        for (Transaction transaction : transactions) {
+            if (transaction.getUser_id() == userId) {
+                allTransactions.add(transaction);
+            }
+        }
+        CategoriaStrategy.SeparatedTransactions separatedTransactions = CategoriaStrategy.separarPorCategoria(allTransactions);
+
+        // Lógica para calcular a soma das perdas
+        double sumOfGains = separatedTransactions.getGanhos().stream()
+                .mapToDouble(Transaction::getValor)
+                .sum();
+
+        return new ClassifiedGainsResponse(separatedTransactions.getGanhos(), sumOfGains);
+    }
+
+    @GetMapping("/classified-loses/{userId}")
+    public ClassifiedGainsResponse getLoses(@PathVariable int userId) {
+        List<Transaction> transactions = transactionService.getAllTransactions();
+
+        List<Transaction> allTransactions = new ArrayList<>();
+        for(int i = 0;i<transactions.size();i++){
+            if(transactions.get(i).getUser_id() == userId ){
+                allTransactions.add(transactions.get(i));
+            }
+        }
+        CategoriaStrategy.SeparatedTransactions separatedTransactions = CategoriaStrategy.separarPorCategoria(allTransactions);
+
+        // Lógica para calcular a soma dos ganhos
+        double sumOfGains = separatedTransactions.getGastos().stream()
+                .mapToDouble(Transaction::getValor)
+                .sum();
+
+        return new ClassifiedGainsResponse(separatedTransactions.getGastos(), sumOfGains);
+    }
 
 }
